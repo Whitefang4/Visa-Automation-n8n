@@ -27,10 +27,9 @@ Visa Automation is a fully automated visa application processing system built on
 
 | Resource | URL |
 |----------|-----|
-| Frontend | [chatvisa-bridge.lovable.app](https://chatvisa-bridge.lovable.app/) |
+| Frontend | (https://chatvisa-bridge.lovable.app/) |
 | WhatsApp Number | +1 415 523 8886 |
 | Join Code | `join double-bite` |
-| n8n Webhook | `https://savvy101.app.n8n.cloud/webhook/f24b50c8-6efc-4d08-a046-decadbabc468` |
 
 ---
 
@@ -134,10 +133,7 @@ New Message
 
 1. Login at [console.twilio.com](https://console.twilio.com)
 2. Go to **Messaging → Try it out → Send a WhatsApp message → Sandbox Settings**
-3. Set **"When a message comes in"** to:
-   ```
-   https://savvy101.app.n8n.cloud/webhook/f24b50c8-6efc-4d08-a046-decadbabc468
-   ```
+3. Set **"When a message comes in"**
 4. Set method to **POST** → **Save**
 
 > ⚠️ Make sure you use the **production URL** (`/webhook/`) not the test URL (`/webhook-test/`)
@@ -159,76 +155,9 @@ New Message
 3. Send any message
 4. Check **n8n → Executions** — you should see a triggered run
 
----
-
-## 🔗 Webhook Reference
-
-**Production Endpoint:**
-```
-POST https://savvy101.app.n8n.cloud/webhook/f24b50c8-6efc-4d08-a046-decadbabc468
-```
-
-**Twilio Payload Fields:**
-
-| Field | Description |
-|-------|-------------|
-| `Body` | The message text sent by the user |
-| `From` | Sender's WhatsApp number (`whatsapp:+91xxxxxxxxxx`) |
-| `To` | Your Twilio sandbox number |
-| `MediaUrl0` | URL of any attached document or image |
 
 ---
 
-## 📊 Google Sheets Schema
-
-```
-| Phone | Name | Status | Documents | Payment | Notes | Last Updated |
-```
-
-| Column | Description |
-|--------|-------------|
-| `Phone` | Applicant's WhatsApp number — used as primary key |
-| `Status` | Current stage: `AWAITING_DOC` / `doc_process` / `Payment` / `visa_avail` |
-| `Documents` | Document verification status |
-| `Payment` | Payment confirmation flag |
-| `Notes` | AI parsing notes or admin remarks |
-| `Last Updated` | Timestamp of last status change |
-
----
-
-## 🐛 Troubleshooting
-
-**Workflow not triggering?**
-- Check workflow is set to **Active** in n8n
-- Confirm Twilio is using the **production URL** (not `/webhook-test/`)
-- Verify the user has sent `join double-bite` first
-
-**AI parsing failing?**
-- Check Groq API key credentials in n8n
-- Review `lm_parsing` node output in the Executions tab
-
-**Google Sheets not updating?**
-- Re-authenticate the Google Sheets credential in n8n
-- Verify sheet name and column mappings in each node
-
-**Sandbox limitation:**
-- Twilio sandbox requires every user to opt-in with `join double-bite`
-- For production without this restriction, apply for a [Twilio WhatsApp Business number](https://www.twilio.com/whatsapp)
-
----
-
-## 📁 Project Structure
-
-```
-visa-automation/
-├── README.md               # This file
-├── workflow/
-│   └── visa_automation.json  # n8n workflow export
-└── frontend/               # Lovable React app
-    └── chatvisa-bridge/
-```
-
----
 
 ## 📄 License
 
