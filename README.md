@@ -235,5 +235,3 @@ visa-automation/
 MIT — feel free to fork and adapt for your own automation use cases.
 
 ---
-
-*Built with ❤️ using n8n · Twilio · Groq AI · Google Sheets · Lovable*
