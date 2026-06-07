@@ -1,0 +1,1397 @@
+{
+  "name": "Visa automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "f24b50c8-6efc-4d08-a046-decadbabc468",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        -304
+      ],
+      "id": "0d3f785a-961f-41d6-b0d7-248d1e0ca50e",
+      "name": "Webhook",
+      "webhookId": "f24b50c8-6efc-4d08-a046-decadbabc468"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize Twilio WhatsApp payload (robust for n8n Webhook output)\n\nconst payload = $json.body ?? $json;\n\nconst from = payload.From || payload.from || '';\n\n// Remove whatsapp: and leading +\nconst user_phone = from\n  .replace(/^whatsapp:/, '')\n  .replace(/^\\+/, '');\n\nconst user_name = payload.ProfileName || payload.profileName || 'Unknown';\nconst text = payload.Body || payload.body || '';\n\nconst numMedia = parseInt(payload.NumMedia ?? payload.numMedia ?? '0', 10) || 0;\nconst media_urls = [];\n\nfor (let i = 0; i < numMedia; i++) {\n  const url = payload[`MediaUrl${i}`];\n  if (url) media_urls.push(url);\n}\n\nif (media_urls.length === 0 && payload.MediaUrl0) {\n  media_urls.push(payload.MediaUrl0);\n}\n\nreturn {\n  user_phone,\n  user_name,\n  text,\n  media_urls,\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        -304
+      ],
+      "id": "9f21b73e-7d04-4ce9-b66b-7ebe943b4ba6",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1ZqL34R8ujPcSo7-bSv3OwfOugArNCjZ4ZR7bNGwMWuE/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Users",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZqL34R8ujPcSo7-bSv3OwfOugArNCjZ4ZR7bNGwMWuE/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Name",
+              "lookupValue": "={{ $json.user_name }}"
+            },
+            {
+              "lookupColumn": "Mobile No.",
+              "lookupValue": "={{ $json.user_phone }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        -304
+      ],
+      "id": "dc577db1-5019-432b-a949-e5c03a48c1b9",
+      "name": "Get row(s) in sheet",
+      "alwaysOutputData": true,
+      "executeOnce": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1U7eWhTC6Bo6OZ0I",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "273b834a-8bc3-49c9-8f4a-c7bd8acef788",
+              "leftValue": "={{ $json.Name }}",
+              "rightValue": "=",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "a0bbaaf9-b580-4825-849f-e5a9430ea5fa",
+              "leftValue": "={{ $json['Mobile No.'] }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        -304
+      ],
+      "id": "b41ef6ab-cdf0-4660-930d-d473099a2c8a",
+      "name": "If",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1ZqL34R8ujPcSo7-bSv3OwfOugArNCjZ4ZR7bNGwMWuE/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Users",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZqL34R8ujPcSo7-bSv3OwfOugArNCjZ4ZR7bNGwMWuE/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $('Code in JavaScript').item.json.user_name }}",
+            "Mobile No.": "={{ $('Code in JavaScript').item.json.user_phone }}",
+            "State": "AWAITING_DOCUMENTS",
+            "Media_Url": "={{ $('Code in JavaScript').item.json.media_url }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Mobile No.",
+              "displayName": "Mobile No.",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "State",
+              "displayName": "State",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Media_Url",
+              "displayName": "Media_Url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        896,
+        -16
+      ],
+      "id": "e4c3b6f9-5d3e-47d6-9197-c12a4be40553",
+      "name": "Append row in sheet",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "retryOnFail": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1U7eWhTC6Bo6OZ0I",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.State }}",
+                    "rightValue": "AWAITING_DOCUMENTS",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "058f31b4-f537-4331-b32f-bac362b121d2"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "AWAITING_DOCS"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "b3f1e7df-02e0-45dd-8fe7-8ae0b76ea0c5",
+                    "leftValue": "={{ $json.State }}",
+                    "rightValue": "DOCUMENT_PROCESSING",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "doc_process"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "0289d110-8de2-436a-b78d-03a068beabd8",
+                    "leftValue": "={{ $json.State }}",
+                    "rightValue": "PAYMENT_PENDING",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Payment"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "ea15b389-6db9-4817-a44e-56a8dd3e4607",
+                    "leftValue": "={{ $json.State }}",
+                    "rightValue": "VISA_STATUS_AVAILABLE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "visa_avail"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        896,
+        -528
+      ],
+      "id": "a3e10a54-c8e7-4688-bf57-3e67490fa32a",
+      "name": "Switch",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "from": "+14155238886",
+        "to": "={{ $('Code in JavaScript').item.json.user_phone }}",
+        "toWhatsapp": true,
+        "message": "=Hi, {{ $('Code in JavaScript').item.json.user_name }}.\nThanks for contacting our us. please share your travel documents. \n\nBest Regards,",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1088,
+        192
+      ],
+      "id": "86121400-39fb-471c-b07d-5977172652e9",
+      "name": "Send an SMS/MMS/WhatsApp message",
+      "credentials": {
+        "twilioApi": {
+          "id": "tsUwTCyq7ojRjgpR",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "273b834a-8bc3-49c9-8f4a-c7bd8acef788",
+              "leftValue": "={{ $('Code in JavaScript').item.json.media_urls[0] }}",
+              "rightValue": "=",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        -784
+      ],
+      "id": "3940a169-d732-4746-97dc-7dd436a7bc98",
+      "name": "Check Doc",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "from": "+14155238886",
+        "to": "={{ $('Code in JavaScript').item.json.user_phone }}",
+        "toWhatsapp": true,
+        "message": "=Hi, {{ $('Code in JavaScript').item.json.user_name }}.\nWe did not receive your documents please share your travel documents to proceed.\n\nBest Regards,",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1712,
+        -64
+      ],
+      "id": "89865b18-ae04-4ce7-a299-86be16829788",
+      "name": "Send an SMS/MMS/WhatsApp message1",
+      "credentials": {
+        "twilioApi": {
+          "id": "tsUwTCyq7ojRjgpR",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Code in JavaScript').item.json.media_urls[0] }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "twilioApi",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1360,
+        -880
+      ],
+      "id": "51156778-da2f-491f-b38d-6c2aedfc8648",
+      "name": "HTTP Request",
+      "alwaysOutputData": true,
+      "credentials": {
+        "twilioApi": {
+          "id": "tsUwTCyq7ojRjgpR",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1ZqL34R8ujPcSo7-bSv3OwfOugArNCjZ4ZR7bNGwMWuE/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Users",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZqL34R8ujPcSo7-bSv3OwfOugArNCjZ4ZR7bNGwMWuE/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Mobile No.": "={{ $('Code in JavaScript').item.json.user_phone }}",
+            "Media_Url": "={{ $('Code in JavaScript').item.json.media_urls[0] }}",
+            "State": "DOCUMENT_PROCESSING"
+          },
+          "matchingColumns": [
+            "Mobile No."
+          ],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Mobile No.",
+              "displayName": "Mobile No.",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "State",
+              "displayName": "State",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Media_Url",
+              "displayName": "Media_Url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1488,
+        -656
+      ],
+      "id": "a4b02d85-cedb-48a9-aefd-c8ad386bab9e",
+      "name": "Update row in sheet",
+      "alwaysOutputData": true,
+      "executeOnce": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1U7eWhTC6Bo6OZ0I",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "from": "+14155238886",
+        "to": "={{ $('Code in JavaScript').item.json.user_phone }}",
+        "toWhatsapp": true,
+        "message": "=Hi, {{ $('Code in JavaScript').item.json.user_name }}.\nThanks for sending your travel documents, Your document is being processed. The processing time is 1-2 working days.\n\nBest Regards,",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1744,
+        -416
+      ],
+      "id": "d3e36344-5362-4c1c-b7db-228da14ddd14",
+      "name": "Send an SMS/MMS/WhatsApp message2",
+      "credentials": {
+        "twilioApi": {
+          "id": "tsUwTCyq7ojRjgpR",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.cloud.llamaindex.ai/api/v1/parsing/upload",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer llx-tMDy3yE6yCy1nmvL5gRj30Z8CDqmuiF0yolcvsNkdzBEuVg9"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1584,
+        -864
+      ],
+      "id": "d82d21df-38c3-4eae-8501-5460b63a3d5e",
+      "name": "llm_parsing"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1792,
+        -688
+      ],
+      "id": "073fb3a5-f1ba-4f7b-a74b-60686dd136d8",
+      "name": "Wait",
+      "webhookId": "3e64b2ac-b1ae-4043-8339-730527ab812e"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.cloud.llamaindex.ai/api/v1/parsing/job/{{ $('llm_parsing').item.json.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer llx-tMDy3yE6yCy1nmvL5gRj30Z8CDqmuiF0yolcvsNkdzBEuVg9"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2016,
+        -752
+      ],
+      "id": "5f72f5b7-5a67-4877-ae86-f054ea305c14",
+      "name": "llm_parsing1"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.cloud.llamaindex.ai/api/v1/parsing/job/{{ $json.id }}/result/markdown",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer llx-tMDy3yE6yCy1nmvL5gRj30Z8CDqmuiF0yolcvsNkdzBEuVg9"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2464,
+        -688
+      ],
+      "id": "cd2fc297-7e98-432e-b35b-d148952890a1",
+      "name": "llm_parsing2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2afbe6bd-a14f-4351-a39b-49db6188841d",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "SUCCESS",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2240,
+        -688
+      ],
+      "id": "f2a8ede4-9600-4f16-94b1-4742492ed51b",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.markdown }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Extract Passport number from this markdown and return in json format."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        2688,
+        -688
+      ],
+      "id": "e7015e5e-daba-47c6-842e-f5263d3e06ae",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-safeguard-20b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        2768,
+        -464
+      ],
+      "id": "72741c65-55ea-43d9-afcd-6ed5b751dc29",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "u47W80fEIFvuwdYf",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1ZqL34R8ujPcSo7-bSv3OwfOugArNCjZ4ZR7bNGwMWuE/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 574643759,
+          "mode": "list",
+          "cachedResultName": "Cases",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZqL34R8ujPcSo7-bSv3OwfOugArNCjZ4ZR7bNGwMWuE/edit#gid=574643759"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Mobile No.": "={{ $('Code in JavaScript').item.json.user_phone }}",
+            "Name": "={{ $('Code in JavaScript').item.json.user_name }}",
+            "Passport_No.": "={{ JSON.parse(\n    $json.text.replace(/```json\\n?|```/g, '').trim()\n).passport_number }}",
+            "Payment_status": "Pending"
+          },
+          "matchingColumns": [
+            "Mobile No."
+          ],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Mobile No.",
+              "displayName": "Mobile No.",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Passport_No.",
+              "displayName": "Passport_No.",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Payment_status",
+              "displayName": "Payment_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3040,
+        -784
+      ],
+      "id": "44dd3492-65f3-4e87-b40e-74d41acb6db2",
+      "name": "Append row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1U7eWhTC6Bo6OZ0I",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1ZqL34R8ujPcSo7-bSv3OwfOugArNCjZ4ZR7bNGwMWuE/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Users",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZqL34R8ujPcSo7-bSv3OwfOugArNCjZ4ZR7bNGwMWuE/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Mobile No.": "={{ $('Get row(s) in sheet').item.json['Mobile No.'] }}",
+            "Media_Url": "={{ $('Get row(s) in sheet').item.json.Media_Url }}",
+            "State": "PAYMENT_PENDING"
+          },
+          "matchingColumns": [
+            "Mobile No."
+          ],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Mobile No.",
+              "displayName": "Mobile No.",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "State",
+              "displayName": "State",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Media_Url",
+              "displayName": "Media_Url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1488,
+        -448
+      ],
+      "id": "d0a306ba-a970-459d-a81e-5d4084669a2a",
+      "name": "Update row in sheet1",
+      "alwaysOutputData": true,
+      "executeOnce": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1U7eWhTC6Bo6OZ0I",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "from": "+14155238886",
+        "to": "={{ $('Code in JavaScript').item.json.user_phone }}",
+        "toWhatsapp": true,
+        "message": "=Hi, {{ $('Code in JavaScript').item.json.user_name }}.\nplease wait while your documents are beign processed.\n\nBest Regards,",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1168,
+        -464
+      ],
+      "id": "fd1be42c-ed74-4ed5-9b96-1859d7aa35ed",
+      "name": "Send an SMS/MMS/WhatsApp message3",
+      "credentials": {
+        "twilioApi": {
+          "id": "tsUwTCyq7ojRjgpR",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "from": "+14155238886",
+        "to": "={{ $('Code in JavaScript').item.json.user_phone }}",
+        "toWhatsapp": true,
+        "message": "=Hi, {{ $('Code in JavaScript').item.json.user_name }}.\nPayment is not recived, Make the payment for further your visa application, your payment is pending.\n\nBest Regards,",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1232,
+        -288
+      ],
+      "id": "d026c2e4-7b46-4408-91d6-49f9edb2bc5f",
+      "name": "Send an SMS/MMS/WhatsApp message4",
+      "credentials": {
+        "twilioApi": {
+          "id": "tsUwTCyq7ojRjgpR",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "from": "+14155238886",
+        "to": "={{ $('Code in JavaScript').item.json.user_phone }}",
+        "toWhatsapp": true,
+        "message": "=Hi, {{ $('Code in JavaScript').item.json.user_name }}.\nWe processed your application, your viss is available. Thanks for contacting us!!.\n\nBest Regards,",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1104,
+        -112
+      ],
+      "id": "023b7795-1a1a-4a73-bd26-95b6a2e8cbce",
+      "name": "Send an SMS/MMS/WhatsApp message5",
+      "credentials": {
+        "twilioApi": {
+          "id": "tsUwTCyq7ojRjgpR",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            },
+            {}
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1ZqL34R8ujPcSo7-bSv3OwfOugArNCjZ4ZR7bNGwMWuE/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "574643759",
+          "mode": "id"
+        },
+        "event": "rowUpdate",
+        "options": {
+          "columnsToWatch": [
+            "Payment_status"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        528
+      ],
+      "id": "2524613d-83cc-4dc9-838b-9ab2cca420a5",
+      "name": "Google Sheets Trigger",
+      "alwaysOutputData": false,
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "n3kYohUSORm95nzR",
+          "name": "Google Sheets Trigger account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "from": "+14155238886",
+        "to": "={{ $json['Mobile No.'] }}",
+        "toWhatsapp": true,
+        "message": "=Hi, {{ $json.Name }} .\nThanks for the payment. Your payment has been accepted. Your visa status is now available.\n\nBest Regards,",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        224,
+        432
+      ],
+      "id": "cd9148ff-7344-4d99-8e4d-4531d7bee35b",
+      "name": "Send an SMS/MMS/WhatsApp message6",
+      "credentials": {
+        "twilioApi": {
+          "id": "tsUwTCyq7ojRjgpR",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1ZqL34R8ujPcSo7-bSv3OwfOugArNCjZ4ZR7bNGwMWuE/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Users",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZqL34R8ujPcSo7-bSv3OwfOugArNCjZ4ZR7bNGwMWuE/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Mobile No.": "={{ $json['Mobile No.'] }}",
+            "State": "VISA_STATUS_AVAILABLE"
+          },
+          "matchingColumns": [
+            "Mobile No."
+          ],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Mobile No.",
+              "displayName": "Mobile No.",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "State",
+              "displayName": "State",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Media_Url",
+              "displayName": "Media_Url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        624
+      ],
+      "id": "7ccf1c9f-b414-4ef7-8d49-6b79fe046135",
+      "name": "Update row in sheet2",
+      "alwaysOutputData": true,
+      "executeOnce": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1U7eWhTC6Bo6OZ0I",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Check Doc",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send an SMS/MMS/WhatsApp message3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send an SMS/MMS/WhatsApp message4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send an SMS/MMS/WhatsApp message5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send an SMS/MMS/WhatsApp message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Doc": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send an SMS/MMS/WhatsApp message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "llm_parsing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "llm_parsing": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "llm_parsing1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "llm_parsing2": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "llm_parsing1": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "llm_parsing2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Send an SMS/MMS/WhatsApp message6",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update row in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send an SMS/MMS/WhatsApp message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet1": {
+      "main": [
+        []
+      ]
+    },
+    "Send an SMS/MMS/WhatsApp message3": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "84052868-8198-4b16-8fbd-9e6d312ab6d5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "eb0670208726b640d16973b5531429d326fe5fe22aee0420823a8ea807f013d6"
+  },
+  "nodeGroups": [],
+  "id": "14YnAMD13EUuLXR8",
+  "tags": []
+}
